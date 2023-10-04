@@ -21,29 +21,33 @@ export class ExtractService {
   async findKeywordsConcept(conceptId: number, response: Callback) {
     const keywords: ProjectKeyword[] = [];
     const conceptdata = await this.datasetService.findConcept(conceptId);
-    const promise = this.queuesData(conceptdata, keywords, 3);
-    promise.then(async () => {
-      this.progress.stop();
-      await this.keywordService.upsertKeyword(keywords);
-      const mapKeywordId = await this.mappedKeyword(keywords);
-      const cleanData = mapKeywordId.filter(Boolean);
-      const cleanList = await this.getOldData(cleanData, {
-        keyProject: '_id',
-        keyFunction: 'getConceptProject',
+    const promise = this.queueTasks(conceptdata, keywords, 4).catch(err=> console.log(err))
+    promise
+      .then(async () => {
+        this.progress.stop();
+        await this.keywordService.upsertKeyword(keywords);
+        const mapKeywordId = await this.mappedKeyword(keywords);
+        const cleanData = mapKeywordId.filter(Boolean);
+        const cleanList = await this.getOldData(cleanData, {
+          keyProject: '_id',
+          keyFunction: 'getConceptProject',
+        });
+        const findNewData = this.getNewData(cleanData, cleanList, {
+          keyProject: '_concept_id',
+          keyKeyword: 'keyword_id',
+        });
+        if (findNewData.length > 0) {
+          await this.keywordService.upsertProject(findNewData);
+          return response(null, { countNewKey: findNewData.length });
+        }
+        return response(null, { countNewKey: 0 });
+      })
+      .catch((err) => {
+        console.log(err);
       });
-      const findNewData = this.getNewData(cleanData, cleanList, {
-        keyProject: '_concept_id',
-        keyKeyword: 'keyword_id',
-      });      
-      if (findNewData.length > 0) {
-        await this.keywordService.upsertProject(findNewData);
-        return response(null, { countNewKey: findNewData.length });
-      }
-      return response(null, { countNewKey: 0 });
-    });
   }
 
-  queuesData(dataArr: any, stored: any, rounds: number) {
+  queueTasks(dataArr: any, stored: any, rounds: number) {
     return new Promise<void>((resolve, reject) => {
       this.progress.start(rounds, 0);
       dataArr.slice(0, rounds).forEach((el, idx, arr) => {
@@ -62,7 +66,7 @@ export class ExtractService {
           }, idx * 800);
         }
       });
-    });
+    })
   }
 
   async mappedKeyword(keywordArr: any) {
