@@ -21,8 +21,7 @@ export class ExtractService {
   async findKeywordsConcept(conceptId: number, response: Callback) {
     const keywords: ProjectKeyword[] = [];
     const conceptdata = await this.datasetService.findConcept(conceptId);
-    const promise = this.queueTasks(conceptdata, keywords, 4).catch(err=> console.log(err))
-    promise
+    this.queueTasks(conceptdata, keywords, 5)
       .then(async () => {
         this.progress.stop();
         await this.keywordService.upsertKeyword(keywords);
@@ -57,16 +56,20 @@ export class ExtractService {
             const text = el.text;
             const { tokens } = await this.nlpService.cleansingText(text);
             const words = tokens.filter((w) => w.length > 1);
-            const keyword_count: KeywordsResponse[] = Array.from(
-              words.reduce((r, c) => r.set(c, (r.get(c) || 0) + 1), new Map()),
-              ([keyword, count]) => ({ keyword, count }),
-            );
+            const keyword_count: KeywordsResponse[] = this.tfidf(words);
             keyword_count.map((kco) => stored.push({ _id: el._id, ...kco }));
             if (idx === arr.length - 1) resolve();
           }, idx * 800);
         }
       });
-    })
+    });
+  }
+
+  tfidf(words: Array<string>) {
+    return Array.from(
+      words.reduce((r, c) => r.set(c, (r.get(c) || 0) + 1), new Map()),
+      ([keyword, count]) => ({ keyword, count }),
+    );
   }
 
   async mappedKeyword(keywordArr: any) {
