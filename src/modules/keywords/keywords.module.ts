@@ -6,11 +6,7 @@ import { Projects } from './entity/projects.entity';
 import { Automation } from './entity/automation.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Keywords]),
-    TypeOrmModule.forFeature([Projects]),
-    TypeOrmModule.forFeature([Automation]),
-  ],
+  imports: [TypeOrmModule.forFeature([Keywords, Projects, Automation])],
   providers: [KeywordsService],
 })
 export class KeywordsModule {}

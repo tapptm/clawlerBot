@@ -1,16 +1,15 @@
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { ExtractService } from './extracts.service';
-import { Response } from 'express';
+import { ExtractResponse } from './interface/extract.interface';
 
 @Controller('extract')
 export class ExtractController {
   constructor(private readonly extractService: ExtractService) {}
 
   @Post('keywords')
-  scrapWord(@Body() body: any, @Res() res: Response) {
+  async scrapWord(@Body() body: any): Promise<ExtractResponse> {
     const { conceptId } = body;
-    this.extractService.findKeywordsConcept(conceptId, (error, data) => {
-      res.json(data);
-    });
+    const results = await this.extractService.findKeywordsConcept(conceptId);
+    return results;
   }
 }
