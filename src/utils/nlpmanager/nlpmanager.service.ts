@@ -19,4 +19,11 @@ export class NlpManagerService {
     );
     return data;
   }
+
+  tfidf(words: Array<string>) {
+    return Array.from(
+      words.reduce((r, c) => r.set(c, (r.get(c) || 0) + 1), new Map()),
+      ([keyword, count]) => ({ keyword, count }),
+    );
+  }
 }

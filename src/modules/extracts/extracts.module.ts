@@ -12,16 +12,20 @@ import { KeywordsService } from '../keywords/keywords.service';
 import { Keywords } from '../keywords/entity/keywords.entity';
 import { Projects } from '../keywords/entity/projects.entity';
 import { Automation } from '../keywords/entity/automation.entity';
+import { QueueModule } from 'src/tasks/queues/queue.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ConceptProposal]),
-    TypeOrmModule.forFeature([ProposalProject]),
-    TypeOrmModule.forFeature([ConceptProposalKeyword]),
-    TypeOrmModule.forFeature([Keywords]),
-    TypeOrmModule.forFeature([Projects]),
-    TypeOrmModule.forFeature([Automation]),
+    TypeOrmModule.forFeature([
+      ConceptProposal,
+      ProposalProject,
+      ConceptProposalKeyword,
+      Keywords,
+      Projects,
+      Automation,
+    ]),
     NlpManagerModule,
+    QueueModule,
   ],
   providers: [ExtractService, DatasetService, KeywordsService, ProgressBar],
   controllers: [ExtractController],

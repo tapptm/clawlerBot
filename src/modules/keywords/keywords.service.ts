@@ -1,13 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Keywords } from './entity/keywords.entity';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Projects } from './entity/projects.entity';
 import { Automation } from './entity/automation.entity';
-import {
-  KeywordsResponse,
-  ProjectResponse,
-} from 'src/common/interface/keyword.interface';
+import { KeywordsResponse } from 'src/common/interface/keyword.interface';
 
 @Injectable()
 export class KeywordsService {
@@ -48,7 +45,13 @@ export class KeywordsService {
     ]);
   }
 
-  async getConceptProject(cid: number) {
-    return await this.projectRepository.find({ where: { _concept_id: cid } });
+  async getCpProject(cid: number) {
+    const data = await this.projectRepository.find({
+      where: { _concept_id: cid },
+    });
+    return data.map((obj) => ({
+      _id: obj._concept_id,
+      keyword: obj.keyword_id,
+    }));
   }
 }

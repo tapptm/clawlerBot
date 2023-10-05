@@ -7,9 +7,11 @@ import { ConceptProposalKeyword } from './entity/keyword.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ConceptProposal]),
-    TypeOrmModule.forFeature([ProposalProject]),
-    TypeOrmModule.forFeature([ConceptProposalKeyword]),
+    TypeOrmModule.forFeature([
+      ConceptProposal,
+      ProposalProject,
+      ConceptProposalKeyword,
+    ]),
   ],
   providers: [DatasetService],
 })

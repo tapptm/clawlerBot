@@ -1,80 +1,52 @@
-import { Injectable } from '@nestjs/common';
-import { NlpManagerService } from 'src/utils/nlpmanager/nlpmanager.service';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { DatasetService } from 'src/modules/datasets/datasets.service';
-import { Callback } from 'src/common/type/callback.type';
-import { ProgressBar } from 'src/config/progress';
-import {
-  KeywordsResponse,
-  ProjectKeyword,
-} from 'src/common/interface/keyword.interface';
 import { KeywordsService } from '../keywords/keywords.service';
+import { QueueService } from 'src/tasks/queues/queue.service';
+import { ExtractResponse } from './interface/extract.interface';
 
 @Injectable()
 export class ExtractService {
   constructor(
     private readonly datasetService: DatasetService,
     private readonly keywordService: KeywordsService,
-    private readonly nlpService: NlpManagerService,
-    private readonly progress: ProgressBar,
+    private readonly queueService: QueueService,
   ) {}
 
-  async findKeywordsConcept(conceptId: number, response: Callback) {
-    const keywords: ProjectKeyword[] = [];
-    const conceptdata = await this.datasetService.findConcept(conceptId);
-    this.queueTasks(conceptdata, keywords, 5)
-      .then(async () => {
-        this.progress.stop();
-        await this.keywordService.upsertKeyword(keywords);
-        const mapKeywordId = await this.mappedKeyword(keywords);
-        const cleanData = mapKeywordId.filter(Boolean);
-        const cleanList = await this.getOldData(cleanData, {
-          keyProject: '_id',
-          keyFunction: 'getConceptProject',
-        });
-        const findNewData = this.getNewData(cleanData, cleanList, {
-          keyProject: '_concept_id',
-          keyKeyword: 'keyword_id',
-        });
-        if (findNewData.length > 0) {
-          await this.keywordService.upsertProject(findNewData);
-          return response(null, { countNewKey: findNewData.length });
-        }
-        return response(null, { countNewKey: 0 });
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+  async findKeywordsConcept(conceptId: number): Promise<ExtractResponse> {
+    try {
+      // Find concept_proposal from database
+      const conceptData = await this.datasetService.findConcept(conceptId);
+
+      // Queue task 1 sec per element from concept_proposal Data to Find keywords using NLP algorithm by pythianlp
+      const keywords = await this.queueService.keywordsTask(conceptData.slice(11,16));
+
+      // Upsert keywords into database and mapped keyword name to id
+      await this.keywordService.upsertKeyword(keywords);
+      const mapKeywordId = await this.mappedKeyword(keywords);
+      const cleanKeywords = mapKeywordId.filter(Boolean);
+
+      // Find exist data from database
+      const existKeywords = await this.checkExistData(cleanKeywords, 'getCpProject');
+
+      // Compare Two Arrays for get no exist data
+      const getNewData = await this.getNoExistData(cleanKeywords, existKeywords);
+
+      // Check new data has value then upsert new data into database and return it
+      if (getNewData.length > 0) {
+        await this.keywordService.upsertProject(getNewData);
+        return { countNewKey: getNewData.length };
+      }
+
+      // Return When new data was not found
+      return { countNewKey: 0 };
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
 
-  queueTasks(dataArr: any, stored: any, rounds: number) {
-    return new Promise<void>((resolve, reject) => {
-      this.progress.start(rounds, 0);
-      dataArr.slice(0, rounds).forEach((el, idx, arr) => {
-        if (el.text) {
-          setTimeout(async () => {
-            this.progress.increment();
-            const text = el.text;
-            const { tokens } = await this.nlpService.cleansingText(text);
-            const words = tokens.filter((w) => w.length > 1);
-            const keyword_count: KeywordsResponse[] = this.tfidf(words);
-            keyword_count.map((kco) => stored.push({ _id: el._id, ...kco }));
-            if (idx === arr.length - 1) resolve();
-          }, idx * 800);
-        }
-      });
-    });
-  }
-
-  tfidf(words: Array<string>) {
-    return Array.from(
-      words.reduce((r, c) => r.set(c, (r.get(c) || 0) + 1), new Map()),
-      ([keyword, count]) => ({ keyword, count }),
-    );
-  }
-
-  async mappedKeyword(keywordArr: any) {
+  private async mappedKeyword(keywords: any[]) {
     return await Promise.all(
-      keywordArr.map(async (key) => {
+      keywords.map(async (key) => {
         const keywordsList = await this.keywordService.getKeywords(key.keyword);
         if (
           keywordsList.length &&
@@ -86,40 +58,22 @@ export class ExtractService {
     );
   }
 
-  async getOldData(
-    newArr: any,
-    options: {
-      keyProject?: string;
-      keyFunction?: any;
-    },
-  ) {
-    const cidList = [...new Set(newArr.map((val) => val[options.keyProject]))];
+  private async checkExistData(arrayData: any[], functionName?: any) {
+    const idList = [...new Set(arrayData.map((val) => val._id))];
     const cleanList = await Promise.all(
-      cidList.map(async (li: number) => {
-        const oldData = await this.keywordService[options.keyFunction](li);
+      idList.map(async (li: number) => {
+        const oldData = await this.keywordService[functionName](li);
         return [...oldData];
       }),
     );
     return cleanList.flat(1);
   }
 
-  getNewData(
-    newArr: any,
-    oldArr: any,
-    options: {
-      keyProject?: string;
-      keyKeyword?: string;
-    },
-  ) {
-    oldArr = oldArr.map((oldObj) => ({
-      _id: oldObj[options.keyProject],
-      keyword: oldObj[options.keyKeyword],
-    }));
-    return newArr.filter(
-      (newObj) =>
-        !oldArr.some(
-          (oldObj) =>
-            oldObj._id === newObj._id && oldObj.keyword === newObj.keyword,
+  private async getNoExistData(arrfir: any[], arrSec: any[]) {
+    return arrfir.filter(
+      (fobj) =>
+        !arrSec.some(
+          (sobj) => sobj._id === fobj._id && sobj.keyword === fobj.keyword,
         ),
     );
   }
