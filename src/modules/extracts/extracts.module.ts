@@ -13,6 +13,8 @@ import { Keywords } from '../keywords/entity/keywords.entity';
 import { Projects } from '../keywords/entity/projects.entity';
 import { Automation } from '../keywords/entity/automation.entity';
 import { QueueModule } from 'src/tasks/queues/queue.module';
+import { UsProjects } from '../datasets/entity/usproject.entity';
+import { LoggerModule } from 'src/config/logger/logger.module';
 
 @Module({
   imports: [
@@ -23,9 +25,11 @@ import { QueueModule } from 'src/tasks/queues/queue.module';
       Keywords,
       Projects,
       Automation,
+      UsProjects
     ]),
     NlpManagerModule,
     QueueModule,
+    LoggerModule
   ],
   providers: [ExtractService, DatasetService, KeywordsService, ProgressBar],
   controllers: [ExtractController],

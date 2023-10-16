@@ -1,9 +1,10 @@
 import { SingleBar } from 'cli-progress';
+import { green, greenBright, grey, yellow, bgYellow, blue } from 'ansi-colors';
 
 export class ProgressBar extends SingleBar {
-  constructor() {
+  constructor(protected context: string, protected dateFormat = new Date().toLocaleString()) {
     super({
-      format: 'progress: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total}',
+      format: `${blue('[DUBUG]')} ${dateFormat} - ${yellow(`[${context}]`)} 🚀 ${greenBright('{bar}')} {percentage}% | ETA: {eta}s | Chunks {value}/{total}`
     });
   }
 }

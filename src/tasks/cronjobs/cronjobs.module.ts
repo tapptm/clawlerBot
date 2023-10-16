@@ -11,12 +11,21 @@ import { Projects } from 'src/modules/keywords/entity/projects.entity';
 import { Automation } from 'src/modules/keywords/entity/automation.entity';
 import { NlpManagerModule } from 'src/utils/nlpmanager/nlpmanager.module';
 import { QueueModule } from '../queues/queue.module';
+import { UsProjects } from 'src/modules/datasets/entity/usproject.entity';
+import { LoggerModule } from 'src/config/logger/logger.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ConceptProposal, Keywords, Projects, Automation]),
+    TypeOrmModule.forFeature([
+      ConceptProposal,
+      UsProjects,
+      Keywords,
+      Projects,
+      Automation,
+    ]),
     NlpManagerModule,
     QueueModule,
+    LoggerModule
   ],
   providers: [
     CronjobsService,
