@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConceptProposal } from './entity/concept.entity';
 import { ProposalProject } from './entity/proposal.entity';
 import { ConceptProposalKeyword } from './entity/keyword.entity';
+import { UsProjects } from './entity/usproject.entity';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { ConceptProposalKeyword } from './entity/keyword.entity';
       ConceptProposal,
       ProposalProject,
       ConceptProposalKeyword,
+      UsProjects
     ]),
   ],
   providers: [DatasetService],
